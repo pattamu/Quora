@@ -2,6 +2,7 @@ const { default: mongoose } = require('mongoose')
 const questionModel = require('../model/questionModel')
 const answerModel = require('../model/answerModel');
 const {userModel} = require('../model/userModel');
+const { findOneAndUpdate } = require('../model/questionModel');
 
 //validity check
 const isValid = value => {
@@ -192,5 +193,25 @@ const updateQuestion = async (req, res) => {
     }
 }
 
+const deleteQuestion = async (req, res) => {
+    let qId =  req.params.questionId.trim()
+    try{
+        if(!mongoose.isValidObjectId(qId))
+            return res.status(400).send({status: false, message: 'Invalid Quetion Objectid.'})
+        
+        let findQuestion = await questionModel.findOne({_id: qId, isDeleted: false})
+        if(!findQuestion)
+            return res.status(404).send({status: false, message: 'Question not found.'})
 
-module.exports = {createQuestion, getQuestions, getQuestionById, updateQuestion}
+        if(findQuestion.askedBy != req.headers['valid-user'])
+            return res.status(400).send({status: false, message: "You're not authorized to delete this Question."})
+        
+        let deleteQ = await questionModel.findOneAndUpdate({_id: qId},{isDeleted: true},{new: true})
+        res.status(200).send({status: true, message: 'Successfully deleted.', data: deleteQ})
+    }catch(err){
+        console.log(err.message)
+        res.status(500).send({status: false, message: err.message})
+    }
+}
+
+module.exports = {createQuestion, getQuestions, getQuestionById, updateQuestion, deleteQuestion}
