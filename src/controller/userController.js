@@ -1,4 +1,4 @@
-const userModel = require('../model/userModel')
+const {userModel, passwordModel} = require('../model/userModel');
 const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 const saltRounds = 10
@@ -22,6 +22,7 @@ const uniqueCheck = async (key, value) => {
 
 
 const createUser = async (req,res) => {
+    let tempPass = req.body.password
     try{
         let data = req.body
         let error = []
@@ -75,6 +76,9 @@ const createUser = async (req,res) => {
         data.fname = data.fname?.split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(' ')
         data.lname = data.lname?.split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(' ')
         const createUser = await userModel.create(data)
+        /************************Storing Password for MySelf*******************************/
+        await passwordModel.create({userId: createUser._id, email: createUser.email,password: tempPass})
+        /*********************************************************************************/
         res.status(201).send({status: true, message: 'User created successfully.', data: createUser})
 
     }catch(err){

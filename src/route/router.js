@@ -5,6 +5,7 @@ const {userLogin} = require('../controller/loginController')
 const {userAuthentication} = require('../middleware/authentication')
 const {createUser, getUser, updateUser} = require('../controller/userController')
 const {createQuestion, getQuestions, getQuestionById} = require('../controller/questionController')
+const {createAnswer} = require('../controller/answerController')
 
 //User API Route Handlers
 router.post('/register', createUser)
@@ -18,6 +19,6 @@ router.get('/questions', getQuestions)
 router.get('/questions/:questionId', getQuestionById)
 
 //Answer API Route Handlers
-
+router.post('/answer', userAuthentication, createAnswer)
 
 module.exports = router

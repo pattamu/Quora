@@ -1,7 +1,7 @@
 const { default: mongoose } = require('mongoose')
 const questionModel = require('../model/questionModel')
 const answerModel = require('../model/answerModel');
-const userModel = require('../model/userModel');
+const {userModel} = require('../model/userModel');
 
 //validity check
 const isValid = value => {
@@ -14,8 +14,8 @@ const createQuestion = async (req,res) => {
     let data = req.body, findUser
     let error = []
     try{
-        if(mongoose.isValidObjectId(data.askedBy))
-            findUser = await userModel.findById(data.askedBy)
+        if(mongoose.isValidObjectId(data.askedBy.trim()))
+            findUser = await userModel.findById(data.askedBy.trim())
 
         if(!Object.keys(data).length)
             return res.status(400).send({status: false, message: "Enter your Qestion details."})
@@ -35,9 +35,9 @@ const createQuestion = async (req,res) => {
 
         if(!isValid(data.askedBy))
             error.push('askedBy is ObjectId required')
-        if(isValid(data.askedBy) && !mongoose.isValidObjectId(data.askedBy))
+        if(isValid(data.askedBy) && !mongoose.isValidObjectId(data.askedBy.trim()))
             error.push('Invalid askedBy ObjectId')
-        if(!findUser && mongoose.isValidObjectId(data.askedBy))
+        if(mongoose.isValidObjectId(data.askedBy.trim()) && !findUser)
             error.push('User not found')
 
         if(error.length == 1)
@@ -45,7 +45,7 @@ const createQuestion = async (req,res) => {
         else if(error.length > 1)
             return res.status(400).send({status: false, message: error})
 
-        if(data.askedBy != req.headers['valid-user'])
+        if(data.askedBy.trim() != req.headers['valid-user'])
             return res.status(401).send({status: false, message: 'user not authorised.'})
 
         if(Array.isArray(data.tag))
@@ -78,26 +78,28 @@ const getQuestions = async (req, res) => {
         delete req.query.sort
 
         if(!Object.keys(req.query).length){
-            let questions = await questionModel.find({isDeleted: false}).collation({ locale: "en", strength: 2 }).sort({description: sort}).lean()
+            let questions = await questionModel.find({isDeleted: false}).collation({ locale: "en", strength: 2 }).sort({createdAt: sort}).lean()
             if(!questions.length)
                 return res.status(404).send({status: false, msg: "No Questions found."})
-            let answers = await answerModel.find({questionId: questions, isDeleted: false}).lean()
+            let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).lean()
             if(answers.length){
                 for(let i in questions){
-                    questions[i]['anaswers'] = "No Answers Present for this Question yet." //1st i'm assigning this string in each 'anaswers' field 
-                    questions[i]['anaswers'] = answers.filter(x => x.questionId == questions[i].questionId) //if some answers found then I'm replacing 'anaswers' with the answer array
+                    questions[i]['answers'] = answers.filter(x => x.questionId.toString() == questions[i]._id)
+                    if(!questions[i]['answers'].length)
+                        questions[i]['answers'] = "No Answers Present for this Question yet."
                 }
             }
             return res.status(200).send({status:true, data:questions})
         }
-        let questions = await questionModel.find({$or:total, isDeleted: false, isPublished: true}).collation({ locale: "en", strength: 2 }).sort({description: sort}).lean()
+        let questions = await questionModel.find({$or:total, isDeleted: false, isPublished: true}).collation({ locale: "en", strength: 2 }).sort({createdAt: sort}).lean()
         if(!questions.length)
             return res.status(404).send({status: false, msg: "No Questions found."})
-        let answers = await answerModel.find({questionId: questions, isDeleted: false}).lean()
+        let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).lean()
         if(answers.length){
             for(let i in questions){
-                questions[i]['anaswers'] = "No Answers Present for this Question yet."
-                questions[i]['anaswers'] = answers.filter(x => x.questionId == questions[i].questionId)
+                questions[i]['answers'] = answers.filter(x => x.questionId.toString() == questions[i]._id)
+                if(!questions[i]['answers'].length)
+                    questions[i]['answers'] = "No Answers Present for this Question yet."
             }
         }
         return res.status(200).send({status:true, data:questions})
@@ -121,9 +123,9 @@ const getQuestionById = async (req, res) => {
 
         let answers = await answerModel.find({questionId: qId, isDeleted: false}).lean()
         if(answers.length)
-            question['anaswers'] = answers
+            question['answers'] = answers
             
-        question['anaswers'] = "No Answers Present for this Question yet."
+        question['answers'] = "No Answers Present for this Question yet."
         return res.status(200).send({status:true, data:question})
     }catch(err){
         console.log(err.message)
