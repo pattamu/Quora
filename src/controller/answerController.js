@@ -61,4 +61,21 @@ const createAnswer = async (req, res) => {
     }
 }
 
-module.exports = {createAnswer}
+const getAnswers = async (req, res) => {
+    try{
+        let qId = req.params.questionId
+        if(!mongoose.isValidObjectId(qId))
+            return res.status(400).send({status: false, message: "Invalid QuestionId in params."})
+        let answers = await answerModel.find({questionId: qId, isDeleted: false})
+        if(!answers.length)
+            return res.status(404).send({status: false, message: "No answers available for this question currently."})
+        
+        res.status(200).send({status: true, message: answers})
+    }catch(err){
+        console.log(err.message)
+        res.status(500).send({status: false, message: err.message})
+    }
+}
+
+
+module.exports = {createAnswer, getAnswers}

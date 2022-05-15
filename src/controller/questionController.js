@@ -29,7 +29,7 @@ const createQuestion = async (req,res) => {
                     error.push('Invalid tag(s)')
             }else if(!isValid(data.tag))
                 error.push('tag is required')
-            else if(isValid(data.tag) && data.tag.match(/[^-_a-zA-Z]/))
+            else if(isValid(data.tag) && data.tag.trim().match(/[^-_a-zA-Z]/))
                 error.push('Invalid tag(s)')
         }
 
@@ -113,7 +113,7 @@ const getQuestions = async (req, res) => {
 
 const getQuestionById = async (req, res) => {
     try{
-        let qId = req.params.questionId
+        let qId = req.params.questionId.trim()
 
         if(!mongoose.isValidObjectId(qId))
             return res.status(400).send({status: false, message: 'Invalid Quetion Objectid.'})
@@ -134,4 +134,63 @@ const getQuestionById = async (req, res) => {
     }
 }
 
-module.exports = {createQuestion, getQuestions, getQuestionById}
+const updateQuestion = async (req, res) => {
+    let data = req.body
+    let qId = req.params.questionId.trim()
+    let err = [], err1 = [], errstr;
+    try{
+        if(!mongoose.isValidObjectId(qId))
+            return res.status(400).send({status: false, message: 'Invalid Quetion Objectid.'})
+        
+        let findQuestion = await questionModel.findById(qId)
+        if(!findQuestion)
+            return res.status(400).send({status: false, message: 'Question not found.'})
+
+        if(findQuestion.askedBy != req.headers['valid-user'])
+            return res.status(400).send({status: false, message: "You're not authorized to update this Question."})
+        
+        if(!Object.keys(data).length)
+            return res.status(400).send({status: false, message: "You didn't provide any data to update."})
+
+        Object.keys(data).forEach(x => {if(!['description', 'tag', 'askedBy'].includes(x)) err.push(x)})
+        errstr = err.length?err.join(', ') + `${err.length>1?' are Invalid fields.':' is an Invalid field.'}`:''
+        Object.keys(data).forEach(x => {if(['askedBy'].includes(x)) err1.push(x)})
+        errstr += err1.length?`${errstr.length?' And ':''}` + err1.join(', ') + " can't be updated.":''
+
+        if(errstr.trim().length) 
+            return res.status(400).send({status:false, message:errstr.trim()})
+        
+        if(!isValid(data.description))
+            delete data.description
+
+        if(data.hasOwnProperty('tag')){
+            if(Array.isArray(data.tag)){
+                if(!data.tag.some(x => x.trim()))
+                    delete data.tag
+                else if(data.tag.some(x => x.trim().match(/[^-_a-zA-Z]/)))
+                    return res.status(400).send({status: false, message: 'Invalid tag(s)'})
+            }else if(!isValid(data.tag))
+                delete data.tag
+            else if(isValid(data.tag) && data.tag.trim().match(/[^-_a-zA-Z]/))
+                return res.status(400).send({status: false, message: 'Invalid tag(s)'})
+        }
+
+        if(Array.isArray(data.tag))
+            data.tag = data.tag.filter(x => x.trim())
+        else if(!isValid(data.tag))
+            delete data.tag
+        else data.tag = [data.tag.trim()]
+        
+        let updatedQuestion = await questionModel.findOneAndUpdate({_id: qId, isDeleted: false}, 
+                                                                    {description: data.description,
+                                                                    $addToSet: {tag: {$each:data.tag||[]}}}, 
+                                                                    { new: true })
+        res.status(200).send({status: false, message: 'Successfully Updated', data: updatedQuestion})
+    }catch(err){
+        console.log(err.message)
+        res.status(500).send({status: false, message: err.message})
+    }
+}
+
+
+module.exports = {createQuestion, getQuestions, getQuestionById, updateQuestion}
