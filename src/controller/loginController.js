@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const userModel = require('../model/userModel')
+const {userModel} = require('../model/userModel')
 const secret = process.env.JWT_SECRET || "Quora Project by Sandeep."
 const exp = process.env.JWT_EXP || '50d'
 

@@ -31,7 +31,7 @@ const createAnswer = async (req, res) => {
             error.push('User not found')
 
         if(!isValid(data.text))
-            error.push('Test for answer is required')
+            error.push('Text for answer is required')
 
         if(!isValid(data.questionId))
             error.push('questionId is required')
@@ -47,7 +47,11 @@ const createAnswer = async (req, res) => {
 
         if(data.answeredBy != req.headers['valid-user'])
             return res.status(401).send({status: false, message: 'user not authorised.'})
+        if(findQuestion.askedBy == data.answeredBy)
+            return res.status(400).send({status: false, message: "You can't answer your Own question."})
 
+        data.answeredBy = data.answeredBy.trim()
+        data.questionId = data.questionId.trim()
         let createAnswer = await answerModel.create(data)
         res.status(201).send({status: true, message: "Answer submitted successfully.", data: createAnswer})
 

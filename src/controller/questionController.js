@@ -50,6 +50,7 @@ const createQuestion = async (req,res) => {
 
         if(Array.isArray(data.tag))
         data.tag = data.tag.filter(x => x.trim())
+        data.askedBy = data.askedBy.trim()
         const createQuestion = await questionModel.create(data)
         res.status(201).send({status: true, message: 'Question posted successfully.', data: createQuestion})
 
