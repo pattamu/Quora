@@ -77,5 +77,71 @@ const getAnswers = async (req, res) => {
     }
 }
 
+const updateAnswer = async (req, res) => {
+    let aId = req.params.answerId
+    let data = req.body
+    let err = [], err1 = [], errstr;
+    try{
+        if(!mongoose.isValidObjectId(aId.trim()))
+            return res.status(400).send({status: false, message: "Invalid AnswerId in params."})    
 
-module.exports = {createAnswer, getAnswers}
+        let findAnswer = await answerModel.findOne({_id: aId, isDeleted: false})
+        if(!findAnswer)
+            return res.status(404).send({status: false, message: 'Answer not found.'})
+        
+        if(findAnswer.answeredBy != req.headers['valid-user'])
+            return res.status(401).send({status: false, message: "You're not authorized to update this answer."})
+        
+        if(!Object.keys(data).length)
+            return res.status(400).send({status: false, message: 'Please provide your new Answer to update.'})
+
+        Object.keys(data).forEach(x => {if(!['answeredBy', 'text', 'questionId', 'isDeleted'].includes(x)) err.push(x)})
+        errstr = err.length?err.join(', ') + `${err.length>1?' are Invalid fields.':' is an Invalid field.'}`:''
+        Object.keys(data).forEach(x => {if(['answeredBy', 'questionId', 'isDeleted'].includes(x)) err1.push(x)})
+        errstr += err1.length?`${errstr.length?' And ':''}` + err1.join(', ') + " can't be updated.":''
+
+        if(errstr.trim().length) 
+            return res.status(400).send({status:false, message:errstr.trim()})
+    
+        if(!isValid(data.text))
+            delete data.text
+        
+        let updatedAnswer = await answerModel.findOneAndUpdate({_id: aId},{text: data.text?.trim()},{new: true})
+        if(!isValid(data.text))
+            return res.status(200).send({status:false, message:"Since you didn't provide new answer, the answer is same as previous.", data: updateAnswer})
+        res.status(201).send({status:true, message:"Successfully updated", data: updatedAnswer})
+
+    }catch(err){
+        console.log(err.message)
+        res.status(500).send({status: false, message: err.message})
+    }
+}
+
+
+const deleteAnswer = async (req, res) => {
+    let aId = req.params.answerId
+    let {userId, questionId} = req.body
+    try{
+        if(!mongoose.isValidObjectId(aId))
+            return res.status(400).send({status: false, message: 'Invalid Answer Objectid.'})
+        
+        let findAnswer = await answerModel.findOne({_id: aId, isDeleted: false})
+        if(!findAnswer)
+            return res.status(404).send({status: false, message: 'Answer not found.'})
+
+        if(findAnswer.answeredBy != req.headers['valid-user'])
+            return res.status(400).send({status: false, message: "You're not authorized to delete this Answer."})
+
+        let deleteAns = await answerModel.findOneAndUpdate({_id: aId},{isDeleted: true},{new: true})
+            res.status(200).send({status: true, message: 'Successfully deleted.', data: deleteAns})
+    }catch(err){
+        console.log(err.message)
+        res.status(500).send({status: false, message: err.message})
+    }
+}
+
+module.exports = {createAnswer, getAnswers, updateAnswer, deleteAnswer}
+
+//check cases for 
+//if a question is deleted then user shouldn't find it's relavent answers
+//if user is deleted, then user shouldn't get his questions or answers

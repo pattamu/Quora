@@ -154,9 +154,9 @@ const updateQuestion = async (req, res) => {
         if(!Object.keys(data).length)
             return res.status(400).send({status: false, message: "You didn't provide any data to update."})
 
-        Object.keys(data).forEach(x => {if(!['description', 'tag', 'askedBy'].includes(x)) err.push(x)})
+        Object.keys(data).forEach(x => {if(!['description', 'tag', 'askedBy', 'deletedAt', 'isDeleted'].includes(x)) err.push(x)})
         errstr = err.length?err.join(', ') + `${err.length>1?' are Invalid fields.':' is an Invalid field.'}`:''
-        Object.keys(data).forEach(x => {if(['askedBy'].includes(x)) err1.push(x)})
+        Object.keys(data).forEach(x => {if(['askedBy', 'deletedAt', 'isDeleted'].includes(x)) err1.push(x)})
         errstr += err1.length?`${errstr.length?' And ':''}` + err1.join(', ') + " can't be updated.":''
 
         if(errstr.trim().length) 
@@ -183,10 +183,14 @@ const updateQuestion = async (req, res) => {
             data.tag = [data.tag.trim()]
         
         let updatedQuestion = await questionModel.findOneAndUpdate({_id: qId, isDeleted: false}, 
-                                                                    {description: data.description,
+                                                                    {description: data.description?.trim(),
                                                                     $addToSet: {tag: {$each:data.tag||[]}}}, 
                                                                     { new: true })
-        res.status(200).send({status: true, message: 'Successfully Updated', data: updatedQuestion})
+        if(!Object.keys(data).length)
+            return res.status(200).send({status:false, 
+                message:"Since you didn't provide new Question, the Question is same as previous.", 
+                data: updatedQuestion})
+        res.status(201).send({status: true, message: 'Successfully Updated', data: updatedQuestion})
     }catch(err){
         console.log(err.message)
         res.status(500).send({status: false, message: err.message})
@@ -206,7 +210,7 @@ const deleteQuestion = async (req, res) => {
         if(findQuestion.askedBy != req.headers['valid-user'])
             return res.status(400).send({status: false, message: "You're not authorized to delete this Question."})
         
-        let deleteQ = await questionModel.findOneAndUpdate({_id: qId},{isDeleted: true},{new: true})
+        let deleteQ = await questionModel.findOneAndUpdate({_id: qId},{isDeleted: true, deletedAt: Date.now()},{new: true})
         res.status(200).send({status: true, message: 'Successfully deleted.', data: deleteQ})
     }catch(err){
         console.log(err.message)
