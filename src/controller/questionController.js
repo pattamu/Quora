@@ -2,7 +2,6 @@ const { default: mongoose } = require('mongoose')
 const questionModel = require('../model/questionModel')
 const answerModel = require('../model/answerModel');
 const {userModel} = require('../model/userModel');
-const { findOneAndUpdate } = require('../model/questionModel');
 
 //validity check
 const isValid = value => {
@@ -15,7 +14,7 @@ const createQuestion = async (req,res) => {
     let data = req.body, findUser
     let error = []
     try{
-        if(mongoose.isValidObjectId(data.askedBy.trim()))
+        if(mongoose.isValidObjectId(data.askedBy?.trim()))
             findUser = await userModel.findById(data.askedBy.trim())
 
         if(!Object.keys(data).length)
@@ -49,10 +48,14 @@ const createQuestion = async (req,res) => {
         if(data.askedBy.trim() != req.headers['valid-user'])
             return res.status(401).send({status: false, message: 'user not authorised.'})
 
+        if(findUser.creditScore === 0)
+            return res.status(400).send({status: false, message: "Insufficient credit score. Can't post the question."})
+
         if(Array.isArray(data.tag))
-        data.tag = data.tag.filter(x => x.trim())
+            data.tag = data.tag.filter(x => x.trim())
         data.askedBy = data.askedBy.trim()
         const createQuestion = await questionModel.create(data)
+        await userModel.findOneAndUpdate({_id:data.askedBy, creditScore: {$gt: 0}},{"$inc": { creditScore: -100 } },{new: true})//deducting creditscore by -100 from userModel
         res.status(201).send({status: true, message: 'Question posted successfully.', data: createQuestion})
 
     }catch(err){
@@ -83,7 +86,7 @@ const getQuestions = async (req, res) => {
             let questions = await questionModel.find({isDeleted: false}).collation({ locale: "en", strength: 2 }).sort({createdAt: sort}).lean()
             if(!questions.length)
                 return res.status(404).send({status: false, msg: "No Questions found."})
-            let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).lean()
+            let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).sort({createdAt: -1}).lean()
             if(answers.length){
                 for(let i in questions){
                     questions[i]['answers'] = answers.filter(x => x.questionId.toString() == questions[i]._id)
@@ -96,7 +99,7 @@ const getQuestions = async (req, res) => {
         let questions = await questionModel.find({$or:total, isDeleted: false, isPublished: true}).collation({ locale: "en", strength: 2 }).sort({createdAt: sort}).lean()
         if(!questions.length)
             return res.status(404).send({status: false, msg: "No Questions found."})
-        let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).lean()
+        let answers = await answerModel.find({questionId: questions, isDeleted: false},{isDeleted:0,createdAt:0,updatedAt:0,__v:0}).sort({createdAt: -1}).lean()
         if(answers.length){
             for(let i in questions){
                 questions[i]['answers'] = answers.filter(x => x.questionId.toString() == questions[i]._id)
@@ -123,7 +126,7 @@ const getQuestionById = async (req, res) => {
         if(!question)
             return res.status(404).send({status: false, msg: "No Questions found."})
 
-        let answers = await answerModel.find({questionId: qId, isDeleted: false}).lean()
+        let answers = await answerModel.find({questionId: qId, isDeleted: false}).sort({createdAt: -1}).lean()
         if(answers.length)
             question['answers'] = answers
             

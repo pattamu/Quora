@@ -50,20 +50,21 @@ const createUser = async (req,res) => {
         if(findEmail)
             error.push('E-Mail is already used')
 
-        if(data.phone?.trim() == '')
-            delete data.phone
-        if(isValid(data.phone) && !mobileRegEx.test(data.phone?.trim()))
-            error.push('Phone Number is Invalid')
-        if(findPhone)
-            error.push('Phone Number is already used')
+        if(isValid(data.phone)){
+            data.phone = data.phone.toString().trim()
+            if(isValid(data.phone) && !mobileRegEx.test(data.phone?.trim()))
+                error.push('Phone Number is Invalid')
+            if(findPhone)
+                error.push('Phone Number is already used')
+        }else delete data.phone
 
         if(!isValid(data.password))
             error.push('Password is required')
         if(isValid(data.password) && (data.password.trim().length < 8 || data.password.trim().length > 15))
             error.push('Password is Invalid - must be of length 8 to 15')
 
-        if(!isValid(data.creditScore))
-            error.push('CreditScore is required')
+        // if(!isValid(data.creditScore))//commented for phase 2 as default credit score 500 is added for every user in userModel
+        //     error.push('CreditScore is required')
         if (isValid(data.creditScore) && isNaN(data.creditScore))
             error.push('CreditScore should be a number')
         
@@ -72,6 +73,8 @@ const createUser = async (req,res) => {
         else if(error.length > 1)
             return res.status(400).send({status: false, message: error})
 
+        if(Number(data.creditScore) < 500)
+            data.creditScore = 500//bcz for new user credit score must be minimum 500
         data.password = await bcrypt.hash(data.password, saltRounds)
         data.fname = data.fname?.split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(' ')
         data.lname = data.lname?.split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(' ')

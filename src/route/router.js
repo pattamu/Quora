@@ -26,5 +26,4 @@ router.get('/questions/:questionId/answer', getAnswers)
 router.put('/answer/:answerId', userAuthentication, updateAnswer)
 router.delete('/answers/:answerId', userAuthentication, deleteAnswer)
 
-
 module.exports = router

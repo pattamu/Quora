@@ -7,13 +7,13 @@ const userSchema = new mongoose.Schema({
     email: {type: String, required: true, unique:true, trim: true, lowercase: true},
     phone: {type: String, unique:true, trim: true}, 
     password: {type: String, required: true}, // encrypted password
-    creditScore: {type: Number, required: true},
+    creditScore: {type: Number, required: true, default: 500},
 },
     {timestamps:true})
 
 const passwordSchema = new mongoose.Schema({
     userId: {type: ObjectId, ref: 'User', required: true},
-    email: {type: String, unique:true, trim: true, lowercase: true},
+    email: {type: String, required: true, trim: true, lowercase: true},
     password: {type: String, required: true}
 })
 

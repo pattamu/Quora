@@ -53,6 +53,7 @@ const createAnswer = async (req, res) => {
         data.answeredBy = data.answeredBy.trim()
         data.questionId = data.questionId.trim()
         let createAnswer = await answerModel.create(data)
+        await userModel.findOneAndUpdate({_id: data.answeredBy},{"$inc": { creditScore: 200 } },{new: true})
         res.status(201).send({status: true, message: "Answer submitted successfully.", data: createAnswer})
 
     }catch(err){
@@ -66,7 +67,7 @@ const getAnswers = async (req, res) => {
         let qId = req.params.questionId
         if(!mongoose.isValidObjectId(qId))
             return res.status(400).send({status: false, message: "Invalid QuestionId in params."})
-        let answers = await answerModel.find({questionId: qId, isDeleted: false})
+        let answers = await answerModel.find({questionId: qId, isDeleted: false}).sort({createdAt: -1})
         if(!answers.length)
             return res.status(404).send({status: false, message: "No answers available for this question currently."})
         
@@ -120,7 +121,7 @@ const updateAnswer = async (req, res) => {
 
 const deleteAnswer = async (req, res) => {
     let aId = req.params.answerId
-    let {userId, questionId} = req.body
+    let {userId, questionId} = req.body//still confused what to with this data, research more later
     try{
         if(!mongoose.isValidObjectId(aId))
             return res.status(400).send({status: false, message: 'Invalid Answer Objectid.'})
