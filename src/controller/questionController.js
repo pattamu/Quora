@@ -143,7 +143,8 @@ const updateQuestion = async (req, res) => {
         if(!mongoose.isValidObjectId(qId))
             return res.status(400).send({status: false, message: 'Invalid Quetion Objectid.'})
         
-        let findQuestion = await questionModel.findById(qId)
+        let findQuestion = await questionModel.findOne({_id: qId, isDeleted: false})
+        
         if(!findQuestion)
             return res.status(400).send({status: false, message: 'Question not found.'})
 
@@ -177,16 +178,15 @@ const updateQuestion = async (req, res) => {
         }
 
         if(Array.isArray(data.tag))
-            data.tag = data.tag.filter(x => x.trim())
-        else if(!isValid(data.tag))
-            delete data.tag
-        else data.tag = [data.tag.trim()]
+            data.tag = data.tag.filter(x => x.trim()).map(x => x.trim())
+        else if(isValid(data.tag))
+            data.tag = [data.tag.trim()]
         
         let updatedQuestion = await questionModel.findOneAndUpdate({_id: qId, isDeleted: false}, 
                                                                     {description: data.description,
                                                                     $addToSet: {tag: {$each:data.tag||[]}}}, 
                                                                     { new: true })
-        res.status(200).send({status: false, message: 'Successfully Updated', data: updatedQuestion})
+        res.status(200).send({status: true, message: 'Successfully Updated', data: updatedQuestion})
     }catch(err){
         console.log(err.message)
         res.status(500).send({status: false, message: err.message})
