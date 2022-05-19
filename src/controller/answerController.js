@@ -67,6 +67,11 @@ const getAnswers = async (req, res) => {
         let qId = req.params.questionId
         if(!mongoose.isValidObjectId(qId))
             return res.status(400).send({status: false, message: "Invalid QuestionId in params."})
+        
+        let checkQuestion = await questionModel.findById(qId)
+        if(checkQuestion.isDeleted)
+            return res.status(404).send({status: false, message: "Question not found. Would you like to post this Question instead ?"})
+
         let answers = await answerModel.find({questionId: qId, isDeleted: false}).sort({createdAt: -1})
         if(!answers.length)
             return res.status(404).send({status: false, message: "No answers available for this question currently."})

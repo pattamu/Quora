@@ -15,10 +15,10 @@ const isValid = value => {
     return true
 }
 
-const uniqueCheck = async (key, value) => {
-    let data = {}; data[key] = value
-    return await userModel.findOne(data)
-}
+// const uniqueCheck = async (key, value) => {
+//     let data = {}; data[key] = value
+//     return await userModel.findOne(data)
+// }
 
 
 const createUser = async (req,res) => {
