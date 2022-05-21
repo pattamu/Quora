@@ -48,7 +48,7 @@ const createQuestion = async (req,res) => {
         if(data.askedBy.trim() != req.headers['valid-user'])
             return res.status(401).send({status: false, message: 'user not authorised.'})
 
-        if(findUser.creditScore === 0)
+        if(findUser.creditScore < 100)
             return res.status(400).send({status: false, message: "Insufficient credit score. Can't post the question."})
 
         if(Array.isArray(data.tag))
