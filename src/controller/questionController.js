@@ -70,7 +70,7 @@ const getQuestions = async (req, res) => {
         let tag, sort
 
         if(req.query.tag)
-            tag = (req.query.tag.split(/[, '"+-;]+/)).map(x => x.trim()).map(x => {return {tag:x}})
+            tag = req.query.tag.split(/[, '"+-;]+/).map(x => {return x.trim() && {tag:x}})
         
         if(isValid(req.query.askedBy) && !mongoose.isValidObjectId(req.query.askedBy))
             delete req.query.askedBy
